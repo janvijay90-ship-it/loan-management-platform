@@ -1,0 +1,13 @@
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# Build output
+**/target/
+**/build/
+*.jar
+
+# System files
+.DS_Store
+*.log
