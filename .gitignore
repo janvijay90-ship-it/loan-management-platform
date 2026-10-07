@@ -11,3 +11,4 @@
 # System files
 .DS_Store
 *.log
+/.metadata/
