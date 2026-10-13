@@ -13,18 +13,15 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(name = "loan_applications")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -35,7 +32,7 @@ public class LoanApplication {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String loanReferenceId; // Public UUID reference for client
+    private String loanReferenceId;
 
     @Column(nullable = false)
     private String customerId;
@@ -54,13 +51,14 @@ public class LoanApplication {
     private LocalDateTime updatedAt;
 
     @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+    public void prePersist() {
+        if (this.loanReferenceId == null) {
+            this.loanReferenceId = "LOAN-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (this.createdAt == null) {
+            this.createdAt = now;
+        }
+        this.updatedAt = now;
     }
 }

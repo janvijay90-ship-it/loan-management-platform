@@ -10,4 +10,7 @@ public interface LoanService {
     LoanResponseDTO getLoanById(Long id);
     LoanResponseDTO getLoanByReferenceId(String loanReferenceId);
     List<LoanResponseDTO> getAllLoans();
-}
+    
+    void updateLoanStatus(String loanReferenceId, String status);
+    
+ }
