@@ -1,21 +1,26 @@
 package com.loan.kafka;
 
 import com.loan.dto.LoanResponseDTO;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
-@RequiredArgsConstructor
-@Slf4j
 public class LoanEventProducer {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private static final Logger log = LoggerFactory.getLogger(LoanEventProducer.class);
     private static final String TOPIC = "loan-submitted-topic";
 
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+
+    public LoanEventProducer(KafkaTemplate<String, Object> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
+
     public void publishLoanSubmittedEvent(LoanResponseDTO loanResponse) {
-        log.info("Publishing loan-submitted event for Loan Reference: {}", loanResponse.getLoanReferenceId());
+        log.info("Publishing loan-submitted event for Loan Reference: {}, PAN: {}", 
+                loanResponse.getLoanReferenceId(), loanResponse.getPanNumber());
         kafkaTemplate.send(TOPIC, loanResponse.getLoanReferenceId(), loanResponse);
     }
 }

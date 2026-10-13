@@ -1,57 +1,79 @@
 package com.loan.risk.service;
 
-import java.math.BigDecimal;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
+import com.loan.risk.dto.CibilScoreResult;
 import com.loan.risk.entity.RiskAssessment;
 import com.loan.risk.kafka.RiskEventProducer;
 import com.loan.risk.repository.RiskRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.math.BigDecimal;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class RiskService {
 
+    private static final Logger log = LoggerFactory.getLogger(RiskService.class);
+
     private final RiskRepository riskRepository;
-    
     private final RiskEventProducer riskEventProducer;
+    private final CibilBureauService cibilBureauService;
+
+    public RiskService(RiskRepository riskRepository, 
+                       RiskEventProducer riskEventProducer, 
+                       CibilBureauService cibilBureauService) {
+        this.riskRepository = riskRepository;
+        this.riskEventProducer = riskEventProducer;
+        this.cibilBureauService = cibilBureauService;
+    }
 
     @Transactional
-    public RiskAssessment evaluateRisk(String loanReferenceId, String customerId, Integer creditScore, BigDecimal requestedAmount) {
-        log.info("Evaluating risk for Loan Reference: {} with Credit Score: {}", loanReferenceId, creditScore);
+    public RiskAssessment evaluateRisk(String loanReferenceId, String customerId, String applicantName, 
+                                       String panNumber, String phoneNumber, BigDecimal requestedAmount) {
+        log.info("Evaluating risk for Loan Reference: {}, PAN: {}", loanReferenceId, panNumber);
+
+        // Fetch CIBIL Score from Bureau (or Redis cache)
+        CibilScoreResult cibilResult = cibilBureauService.fetchCibilScore(panNumber, applicantName, phoneNumber);
+        int cibilScore = cibilResult.getCibilScore();
 
         String status;
         String remarks;
 
-        // Simple enterprise credit rule engine logic
-        if (creditScore >= 700) {
+        // Enterprise Underwriting Rules:
+        // Score >= 650 -> APPROVED
+        // Score 600-649 -> MANUAL_REVIEW
+        // Score < 600 -> REJECTED
+        if (cibilScore >= 650) {
             status = "APPROVED";
-            remarks = "Credit score meets prime lending criteria.";
-        } else if (creditScore >= 600) {
+            remarks = "CIBIL score (" + cibilScore + ") meets prime lending criteria (>= 650).";
+        } else if (cibilScore >= 600) {
             status = "MANUAL_REVIEW";
-            remarks = "Credit score requires manual loan officer underwriting.";
+            remarks = "CIBIL score (" + cibilScore + ") requires underwriter manual review (600 - 649).";
         } else {
             status = "REJECTED";
-            remarks = "Credit score is below the minimum threshold of 600.";
+            remarks = "CIBIL score (" + cibilScore + ") is below minimum cutoff threshold of 600.";
         }
 
-        RiskAssessment assessment = RiskAssessment.builder()
-                .loanReferenceId(loanReferenceId)
-                .customerId(customerId)
-                .creditScore(creditScore)
-                .requestedAmount(requestedAmount)
-                .riskStatus(status)
-                .remarks(remarks)
-                .build();
+        RiskAssessment assessment = new RiskAssessment(
+                loanReferenceId,
+                customerId,
+                applicantName,
+                panNumber,
+                phoneNumber,
+                requestedAmount,
+                cibilScore,
+                cibilResult.getBureauReferenceNumber(),
+                status,
+                remarks
+        );
 
         RiskAssessment savedAssessment = riskRepository.save(assessment);
+        log.info("Risk assessment saved successfully with status: {}, CIBIL Score: {}", status, cibilScore);
+
+        // Publish event to loan-evaluated-topic
         riskEventProducer.publishLoanEvaluatedEvent(savedAssessment);
-        log.info("Risk assessment saved and event published successfully.");
+
         return savedAssessment;
     }
 }

@@ -2,7 +2,6 @@ package com.loan.controller;
 
 import java.util.List;
 
-// --- MISSING IMPORTS TO RESOLVE ERRORS ---
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,14 +16,16 @@ import com.loan.dto.LoanResponseDTO;
 import com.loan.service.LoanService;
 
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/loans")
-@RequiredArgsConstructor
 public class LoanController {
 
     private final LoanService loanService;
+
+    public LoanController(LoanService loanService) {
+        this.loanService = loanService;
+    }
 
     @PostMapping
     public ResponseEntity<LoanResponseDTO> applyForLoan(@Valid @RequestBody LoanRequestDTO requestDTO) {

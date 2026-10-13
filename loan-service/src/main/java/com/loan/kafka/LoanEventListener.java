@@ -1,19 +1,23 @@
 package com.loan.kafka;
 
 import com.loan.service.LoanService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
 @Component
-@RequiredArgsConstructor
-@Slf4j
 public class LoanEventListener {
 
+    private static final Logger log = LoggerFactory.getLogger(LoanEventListener.class);
+
     private final LoanService loanService;
+
+    public LoanEventListener(LoanService loanService) {
+        this.loanService = loanService;
+    }
 
     @KafkaListener(topics = "loan-evaluated-topic", groupId = "loan-service-group")
     public void handleLoanEvaluatedEvent(Map<String, Object> eventPayload) {

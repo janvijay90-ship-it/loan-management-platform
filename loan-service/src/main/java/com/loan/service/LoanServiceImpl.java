@@ -1,8 +1,11 @@
 package com.loan.service;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,31 +16,37 @@ import com.loan.enums.LoanStatus;
 import com.loan.kafka.LoanEventProducer;
 import com.loan.repository.LoanRepository;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class LoanServiceImpl implements LoanService {
 
+    private static final Logger log = LoggerFactory.getLogger(LoanServiceImpl.class);
+
     private final LoanRepository loanRepository;
-    private final LoanEventProducer loanEventProducer; // Inject Kafka Producer
+    private final LoanEventProducer loanEventProducer;
+
+    public LoanServiceImpl(LoanRepository loanRepository, LoanEventProducer loanEventProducer) {
+        this.loanRepository = loanRepository;
+        this.loanEventProducer = loanEventProducer;
+    }
 
     @Override
     @Transactional
     public LoanResponseDTO applyForLoan(LoanRequestDTO requestDTO) {
-        log.info("Processing loan application for customer: {}", requestDTO.getCustomerId());
+        log.info("Processing loan application for customer: {}, PAN: {}", 
+                requestDTO.getCustomerId(), requestDTO.getPanNumber());
 
-        String referenceId = "LOAN-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        String referenceId = "LOAN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
-        LoanApplication loan = LoanApplication.builder()
-                .loanReferenceId(referenceId)
-                .customerId(requestDTO.getCustomerId())
-                .requestedAmount(requestDTO.getRequestedAmount())
-                .creditScore(requestDTO.getCreditScore())
-                .status(LoanStatus.SUBMITTED)
-                .build();
+        LoanApplication loan = new LoanApplication(
+                referenceId,
+                requestDTO.getCustomerId(),
+                requestDTO.getApplicantName(),
+                requestDTO.getPanNumber().toUpperCase(),
+                requestDTO.getPhoneNumber(),
+                requestDTO.getRequestedAmount(),
+                null, // creditScore is null until bureau evaluation
+                LoanStatus.SUBMITTED
+        );
 
         // Save to PostgreSQL (loan_db)
         LoanApplication savedLoan = loanRepository.save(loan);
@@ -46,7 +55,7 @@ public class LoanServiceImpl implements LoanService {
         // Map Entity to Response DTO
         LoanResponseDTO responseDTO = mapToDTO(savedLoan);
 
-        // Publish event to Kafka so risk-service can consume it
+        // Publish event to Kafka so risk-service can perform CIBIL inquiry
         loanEventProducer.publishLoanSubmittedEvent(responseDTO);
 
         return responseDTO;
@@ -86,15 +95,18 @@ public class LoanServiceImpl implements LoanService {
     }
 
     private LoanResponseDTO mapToDTO(LoanApplication loan) {
-        return LoanResponseDTO.builder()
-                .id(loan.getId())
-                .loanReferenceId(loan.getLoanReferenceId())
-                .customerId(loan.getCustomerId())
-                .requestedAmount(loan.getRequestedAmount())
-                .creditScore(loan.getCreditScore())
-                .status(loan.getStatus())
-                .createdAt(loan.getCreatedAt())
-                .updatedAt(loan.getUpdatedAt())
-                .build();
+        return new LoanResponseDTO(
+                loan.getId(),
+                loan.getLoanReferenceId(),
+                loan.getCustomerId(),
+                loan.getApplicantName(),
+                loan.getPanNumber(),
+                loan.getPhoneNumber(),
+                loan.getRequestedAmount(),
+                loan.getCreditScore(),
+                loan.getStatus(),
+                loan.getCreatedAt(),
+                loan.getUpdatedAt()
+        );
     }
 }
