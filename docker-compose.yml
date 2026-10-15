@@ -1,7 +1,9 @@
 version: '3.8'
 
 services:
-  # --- DATABASES ---
+  # ==========================================
+  # --- DATABASES (Database-per-service) ---
+  # ==========================================
   postgres-loan:
     image: postgres:15-alpine
     container_name: postgres-loan
@@ -26,6 +28,11 @@ services:
       POSTGRES_PASSWORD: risk_password
     ports:
       - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U risk_user -d risk_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   postgres-disbursement:
     image: postgres:15-alpine
@@ -36,15 +43,29 @@ services:
       POSTGRES_PASSWORD: disbursement_password
     ports:
       - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U disbursement_user -d disbursement_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  # --- CACHE ---
+  # ==========================================
+  # --- CACHE (Idempotency & CIBIL & Rate Limit) ---
+  # ==========================================
   redis:
     image: redis:7-alpine
     container_name: redis-cache
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  # --- MESSAGING BROKER ---
+  # ==========================================
+  # --- MESSAGING BROKER (Apache Kafka) ---
+  # ==========================================
   kafka:
     image: apache/kafka:latest
     container_name: kafka-broker
@@ -64,4 +85,92 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
-      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk' 
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+
+  # ==========================================
+  # --- MICROSERVICES ---
+  # ==========================================
+  loan-service:
+    build: ./loan-service
+    container_name: loan-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-loan:5432/loan_db
+      SPRING_DATASOURCE_USERNAME: loan_user
+      SPRING_DATASOURCE_PASSWORD: loan_password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      postgres-loan:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  risk-service:
+    build: ./risk-service
+    container_name: risk-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-risk:5432/risk_db
+      SPRING_DATASOURCE_USERNAME: risk_user
+      SPRING_DATASOURCE_PASSWORD: risk_password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    depends_on:
+      postgres-risk:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  disbursement-service:
+    build: ./disbursement-service
+    container_name: disbursement-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-disbursement:5432/disbursement_db
+      SPRING_DATASOURCE_USERNAME: disbursement_user
+      SPRING_DATASOURCE_PASSWORD: disbursement_password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    depends_on:
+      postgres-disbursement:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      kafka:
+        condition: service_started
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SERVICES_LOAN_SERVICE_URL: http://loan-service:8081
+      SERVICES_DISBURSEMENT_SERVICE_URL: http://disbursement-service:8083
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      loan-service:
+        condition: service_started
+      disbursement-service:
+        condition: service_started
