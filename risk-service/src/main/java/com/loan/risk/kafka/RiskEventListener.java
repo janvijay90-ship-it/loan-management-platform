@@ -20,7 +20,7 @@ public class RiskEventListener {
         this.riskService = riskService;
     }
 
-    @KafkaListener(topics = "loan-submitted-topic", groupId = "risk-service-group")
+    @KafkaListener(topics = {"loan-submitted", "loan-submitted-topic"}, groupId = "risk-service-group")
     public void handleLoanSubmittedEvent(Map<String, Object> eventPayload) {
         log.info("Received loan-submitted event for risk evaluation: {}", eventPayload);
 

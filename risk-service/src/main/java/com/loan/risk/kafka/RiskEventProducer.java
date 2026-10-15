@@ -10,7 +10,8 @@ import org.springframework.stereotype.Component;
 public class RiskEventProducer {
 
     private static final Logger log = LoggerFactory.getLogger(RiskEventProducer.class);
-    private static final String TOPIC = "loan-evaluated-topic";
+    public static final String TOPIC_CREDIT_EVALUATED = "credit-evaluated";
+    public static final String TOPIC_LEGACY = "loan-evaluated-topic";
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
@@ -19,8 +20,12 @@ public class RiskEventProducer {
     }
 
     public void publishLoanEvaluatedEvent(RiskAssessment assessment) {
-        log.info("Publishing loan-evaluated event for Loan Reference: {} with status: {} (CIBIL: {})", 
+        log.info("Publishing credit-evaluated event for Loan Reference: {} with status: {} (CIBIL: {})", 
                 assessment.getLoanReferenceId(), assessment.getRiskStatus(), assessment.getCibilScore());
-        kafkaTemplate.send(TOPIC, assessment.getLoanReferenceId(), assessment);
+        
+        // Publish to primary topic 'credit-evaluated' as per architecture diagram
+        kafkaTemplate.send(TOPIC_CREDIT_EVALUATED, assessment.getLoanReferenceId(), assessment);
+        // Also send to legacy topic for compatibility
+        kafkaTemplate.send(TOPIC_LEGACY, assessment.getLoanReferenceId(), assessment);
     }
 }

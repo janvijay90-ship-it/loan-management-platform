@@ -19,9 +19,9 @@ public class LoanEventListener {
         this.loanService = loanService;
     }
 
-    @KafkaListener(topics = "loan-evaluated-topic", groupId = "loan-service-group")
-    public void handleLoanEvaluatedEvent(Map<String, Object> eventPayload) {
-        log.info("Received loan-evaluated event: {}", eventPayload);
+    @KafkaListener(topics = {"credit-evaluated", "loan-evaluated-topic"}, groupId = "loan-service-group")
+    public void handleCreditEvaluatedEvent(Map<String, Object> eventPayload) {
+        log.info("Received credit-evaluated event: {}", eventPayload);
 
         String loanReferenceId = (String) eventPayload.get("loanReferenceId");
         String riskStatus = (String) eventPayload.get("riskStatus");
@@ -30,6 +30,19 @@ public class LoanEventListener {
             loanService.updateLoanStatus(loanReferenceId, riskStatus);
         } else {
             log.error("Invalid event payload: missing loanReferenceId or riskStatus");
+        }
+    }
+
+    @KafkaListener(topics = "disbursement-completed", groupId = "loan-service-disbursement-group")
+    public void handleDisbursementCompletedEvent(Map<String, Object> eventPayload) {
+        log.info("Received disbursement-completed event: {}", eventPayload);
+
+        String loanReferenceId = (String) eventPayload.get("loanReferenceId");
+        String status = (String) eventPayload.getOrDefault("status", "SUCCESS");
+
+        if (loanReferenceId != null && "SUCCESS".equalsIgnoreCase(status)) {
+            log.info("Disbursement succeeded. Transitioning final loan status to ACTIVE for: {}", loanReferenceId);
+            loanService.updateLoanStatus(loanReferenceId, "ACTIVE");
         }
     }
 }
