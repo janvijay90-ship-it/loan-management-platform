@@ -1,5 +1,6 @@
 package com.loan.kafka;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loan.entity.OutboxEvent;
 import com.loan.repository.OutboxRepository;
 import org.slf4j.Logger;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class OutboxRelay {
@@ -19,10 +21,14 @@ public class OutboxRelay {
 
     private final OutboxRepository outboxRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ObjectMapper objectMapper;
 
-    public OutboxRelay(OutboxRepository outboxRepository, KafkaTemplate<String, Object> kafkaTemplate) {
+    public OutboxRelay(OutboxRepository outboxRepository, 
+                       KafkaTemplate<String, Object> kafkaTemplate,
+                       ObjectMapper objectMapper) {
         this.outboxRepository = outboxRepository;
         this.kafkaTemplate = kafkaTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @Scheduled(fixedDelay = 2000)
@@ -40,7 +46,8 @@ public class OutboxRelay {
                 log.info("Outbox Relay publishing event [id={}, topic={}, aggregateId={}]", 
                         event.getId(), event.getTopic(), event.getAggregateId());
 
-                kafkaTemplate.send(event.getTopic(), event.getAggregateId(), event.getPayload()).get();
+                Object payloadObject = objectMapper.readValue(event.getPayload(), Map.class);
+                kafkaTemplate.send(event.getTopic(), event.getAggregateId(), payloadObject).get();
 
                 event.setStatus("PUBLISHED");
                 event.setPublishedAt(LocalDateTime.now());
