@@ -1,5 +1,5 @@
 # Core Jenkins plugins for the Loan Management Platform CI/CD pipeline
-# Format: plugin-id:version  (or just plugin-id for latest)
+# Note: blue-ocean was removed (discontinued in 2024)
 
 # Jenkins Configuration as Code (JCasC)
 configuration-as-code
@@ -32,9 +32,6 @@ ws-cleanup
 
 # Notifications
 mailer
-
-# UI improvements
-blue-ocean
 
 # Parameterized builds
 parameterized-trigger

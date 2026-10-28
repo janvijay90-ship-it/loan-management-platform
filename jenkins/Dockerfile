@@ -38,7 +38,7 @@ USER jenkins
 
 # Pre-install essential Jenkins plugins
 COPY plugins.txt /usr/share/jenkins/ref/plugins.txt
-RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
+RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt --skip-failed-plugins
 
 # Copy Jenkins Configuration-as-Code (JCasC) YAML
 COPY jenkins.yaml /var/jenkins_home/casc_configs/jenkins.yaml
