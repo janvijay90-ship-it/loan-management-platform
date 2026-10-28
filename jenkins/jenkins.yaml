@@ -1,22 +1,21 @@
 # ============================================================
 #  Jenkins Configuration as Code (JCasC)
-#  Auto-configures: JDK 17, Maven 3.9, Global credentials,
-#  and a seed Pipeline job pointing at this repo.
+#  Auto-configures: JDK 17, Maven 3.9, admin user, pipeline job
+#  Plugins are installed by Jenkins itself on first boot.
 # ============================================================
 
 jenkins:
-  systemMessage: "Loan Management Platform — Jenkins CI/CD"
+  systemMessage: "Loan Management Platform — Jenkins CI/CD 🚀"
   numExecutors: 4
   mode: NORMAL
 
-  # ---- Security: disable setup wizard & use simple security ----
   securityRealm:
     local:
       allowsSignup: false
       users:
         - id: admin
           name: "Admin"
-          password: "admin123"          # CHANGE IN PRODUCTION
+          password: "admin123"
 
   authorizationStrategy:
     loggedInUsersCanDoAnything:
@@ -26,17 +25,17 @@ tool:
   jdk:
     installations:
       - name: "JDK-17"
-        home: "/opt/java/openjdk"       # JDK already bundled in jenkins:lts-jdk17
+        home: "/opt/java/openjdk"
 
   maven:
     installations:
       - name: "Maven-3"
-        home: "/opt/maven"             # Installed by Dockerfile
+        home: "/opt/maven"
 
 jobs:
   - script: |
       pipelineJob('loan-management-platform') {
-        description('Full CI/CD pipeline for the Loan Management Platform microservices')
+        description('CI/CD pipeline for the Loan Management Platform microservices')
         definition {
           cpsScm {
             scm {
@@ -52,6 +51,6 @@ jobs:
           }
         }
         triggers {
-          scm('H/5 * * * *')   // Poll every 5 minutes; replace with webhook in prod
+          scm('H/5 * * * *')
         }
       }

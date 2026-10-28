@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 @Service
 public class RiskService {
@@ -32,6 +33,14 @@ public class RiskService {
     public RiskAssessment evaluateRisk(String loanReferenceId, String customerId, String applicantName, 
                                        String panNumber, String phoneNumber, BigDecimal requestedAmount) {
         log.info("Evaluating risk for Loan Reference: {}, PAN: {}", loanReferenceId, panNumber);
+
+        Optional<RiskAssessment> existing = riskRepository.findByLoanReferenceId(loanReferenceId);
+        if (existing.isPresent()) {
+            log.info("Risk assessment already exists for Loan Reference: {}. Skipping duplicate evaluation.", loanReferenceId);
+            RiskAssessment existingAssessment = existing.get();
+            riskEventProducer.publishLoanEvaluatedEvent(existingAssessment);
+            return existingAssessment;
+        }
 
         // Fetch CIBIL Score from Bureau (or Redis cache)
         CibilScoreResult cibilResult = cibilBureauService.fetchCibilScore(panNumber, applicantName, phoneNumber);

@@ -17,15 +17,36 @@ Write-Host "Submission Response:`n$submitJson" -ForegroundColor Green
 $refId = $submitResp.loanReferenceId
 Write-Host "`nTracking Loan Reference ID: $refId" -ForegroundColor Yellow
 
-Write-Host "Waiting 5 seconds for asynchronous event processing (Kafka Outbox -> Risk/CIBIL -> Loan -> Disbursement -> Notification)..." -ForegroundColor Yellow
-Start-Sleep -Seconds 5
+Write-Host "Polling for asynchronous event processing (Kafka Outbox -> Risk/CIBIL -> Loan -> Disbursement -> Notification)..." -ForegroundColor Yellow
+$maxRetries = 15
+$currentStatus = "SUBMITTED"
+
+for ($i = 1; $i -le $maxRetries; $i++) {
+    Start-Sleep -Seconds 2
+    try {
+        $statusResp = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/loans/reference/$refId" -Method GET -Headers $headers
+        $currentStatus = $statusResp.status
+        $cScore = $statusResp.creditScore
+        Write-Host "[$i/$maxRetries] Current Loan Status: $currentStatus (CIBIL: $cScore)" -ForegroundColor Cyan
+        if ($currentStatus -eq "ACTIVE") {
+            break
+        }
+    } catch {
+        Write-Host "Waiting for loan record..." -ForegroundColor Gray
+    }
+}
 
 Write-Host "`n=== 3. Querying Final Loan Status via Gateway ===" -ForegroundColor Cyan
 $statusResp = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/loans/reference/$refId" -Method GET -Headers $headers
 $statusJson = $statusResp | ConvertTo-Json -Depth 5
-Write-Host "Current Loan Status:`n$statusJson" -ForegroundColor Green
+Write-Host "Final Loan Status:`n$statusJson" -ForegroundColor Green
 
 Write-Host "`n=== 4. Querying Disbursement Record via Gateway ===" -ForegroundColor Cyan
-$disbResp = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/disbursements/loan/$refId" -Method GET -Headers $headers
-$disbJson = $disbResp | ConvertTo-Json -Depth 5
-Write-Host "Disbursement Record:`n$disbJson" -ForegroundColor Green
+try {
+    $disbResp = Invoke-RestMethod -Uri "http://localhost:8080/api/v1/disbursements/loan/$refId" -Method GET -Headers $headers
+    $disbJson = $disbResp | ConvertTo-Json -Depth 5
+    Write-Host "Disbursement Record:`n$disbJson" -ForegroundColor Green
+    Write-Host "`n>>> [SUCCESS] Full End-to-End Microservices Lifecycle Verified! <<<" -ForegroundColor Green
+} catch {
+    Write-Host "Disbursement query failed: $_" -ForegroundColor Red
+}

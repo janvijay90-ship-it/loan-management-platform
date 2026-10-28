@@ -12,5 +12,6 @@ public interface LoanService {
     List<LoanResponseDTO> getAllLoans();
     
     void updateLoanStatus(String loanReferenceId, String status);
+    void updateLoanStatus(String loanReferenceId, String status, Integer creditScore);
     
  }

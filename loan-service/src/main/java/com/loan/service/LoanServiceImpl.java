@@ -110,11 +110,38 @@ public class LoanServiceImpl implements LoanService {
     @Override
     @Transactional
     public void updateLoanStatus(String loanReferenceId, String status) {
-        log.info("Updating loan status for Reference ID: {} to {}", loanReferenceId, status);
+        updateLoanStatus(loanReferenceId, status, null);
+    }
+
+    @Override
+    @Transactional
+    public void updateLoanStatus(String loanReferenceId, String status, Integer creditScore) {
+        log.info("Updating loan status for Reference ID: {} to {}, creditScore: {}", loanReferenceId, status, creditScore);
         LoanApplication loan = loanRepository.findByLoanReferenceId(loanReferenceId)
                 .orElseThrow(() -> new RuntimeException("Loan not found with reference ID: " + loanReferenceId));
         
         LoanStatus newStatus = LoanStatus.valueOf(status);
+
+        if (creditScore != null) {
+            loan.setCreditScore(creditScore);
+        }
+
+        // State machine guard: Do not regress if already ACTIVE
+        if (loan.getStatus() == LoanStatus.ACTIVE && newStatus == LoanStatus.APPROVED) {
+            log.info("Loan {} is already ACTIVE. Ignoring duplicate APPROVED event.", loanReferenceId);
+            if (creditScore != null) {
+                loanRepository.save(loan);
+            }
+            return;
+        }
+        if (loan.getStatus() == newStatus) {
+            log.info("Loan {} already has status {}. Skipping duplicate transition.", loanReferenceId, newStatus);
+            if (creditScore != null) {
+                loanRepository.save(loan);
+            }
+            return;
+        }
+
         loan.setStatus(newStatus);
         LoanApplication updatedLoan = loanRepository.save(loan);
         log.info("Loan status updated successfully in loan_db to {}.", newStatus);

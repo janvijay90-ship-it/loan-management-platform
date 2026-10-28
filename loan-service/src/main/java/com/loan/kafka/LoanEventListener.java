@@ -25,9 +25,18 @@ public class LoanEventListener {
 
         String loanReferenceId = (String) eventPayload.get("loanReferenceId");
         String riskStatus = (String) eventPayload.get("riskStatus");
+        Object scoreObj = eventPayload.get("cibilScore");
+        Integer cibilScore = null;
+        if (scoreObj instanceof Number) {
+            cibilScore = ((Number) scoreObj).intValue();
+        } else if (scoreObj instanceof String) {
+            try {
+                cibilScore = Integer.parseInt((String) scoreObj);
+            } catch (Exception ignored) {}
+        }
 
         if (loanReferenceId != null && riskStatus != null) {
-            loanService.updateLoanStatus(loanReferenceId, riskStatus);
+            loanService.updateLoanStatus(loanReferenceId, riskStatus, cibilScore);
         } else {
             log.error("Invalid event payload: missing loanReferenceId or riskStatus");
         }
