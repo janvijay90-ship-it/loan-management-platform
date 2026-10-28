@@ -1,0 +1,40 @@
+# Core Jenkins plugins for the Loan Management Platform CI/CD pipeline
+# Format: plugin-id:version  (or just plugin-id for latest)
+
+# Jenkins Configuration as Code (JCasC)
+configuration-as-code
+
+# Pipeline support
+workflow-aggregator
+pipeline-stage-view
+pipeline-graph-analysis
+
+# Git & GitHub integration
+git
+github
+github-branch-source
+
+# Maven integration
+maven-plugin
+
+# Docker integration
+docker-workflow
+docker-plugin
+
+# Credentials management
+credentials-binding
+credentials
+
+# Build tools & utilities
+timestamper
+build-timeout
+ws-cleanup
+
+# Notifications
+mailer
+
+# UI improvements
+blue-ocean
+
+# Parameterized builds
+parameterized-trigger
