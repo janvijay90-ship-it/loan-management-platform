@@ -42,8 +42,7 @@ jobs:
             scm {
               git {
                 remote {
-                  // UPDATE URL below after pushing to GitHub
-                  url('https://github.com/YOUR_USERNAME/loan-management-platform.git')
+                  url('https://github.com/janvijay90-ship-it/loan-management-platform.git')
                 }
                 branches('*/main')
               }

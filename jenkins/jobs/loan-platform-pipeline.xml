@@ -25,7 +25,7 @@
       <userRemoteConfigs>
         <hudson.plugins.git.UserRemoteConfig>
           <!-- UPDATE THIS URL after pushing to GitHub -->
-          <url>https://github.com/YOUR_USERNAME/loan-management-platform.git</url>
+          <url>https://github.com/janvijay90-ship-it/loan-management-platform.git</url>
         </hudson.plugins.git.UserRemoteConfig>
       </userRemoteConfigs>
       <branches>

@@ -44,13 +44,12 @@ This starts **19 containers** covering the full platform:
 ### Step 2 — Push from your machine
 ```powershell
 cd d:\loan-management-system\loan-management-platform
-git remote add origin https://github.com/YOUR_USERNAME/loan-management-platform.git
+git remote add origin https://github.com/janvijay90-ship-it/loan-management-platform.git
 git push -u origin main
 ```
 
 ### Step 3 — Update Jenkins job with your repo URL
-Edit `jenkins/jenkins.yaml` and `jenkins/jobs/loan-platform-pipeline.xml`,
-replacing `YOUR_USERNAME` with your actual GitHub username.
+✅ Already configured — Jenkins points to `https://github.com/janvijay90-ship-it/loan-management-platform.git`
 
 ---
 
