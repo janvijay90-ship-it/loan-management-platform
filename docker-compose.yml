@@ -139,6 +139,7 @@ services:
       SPRING_DATASOURCE_USERNAME: loan_user
       SPRING_DATASOURCE_PASSWORD: loan_password
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
     depends_on:
       postgres-loan:
         condition: service_healthy
@@ -157,6 +158,7 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
     depends_on:
       postgres-risk:
         condition: service_healthy
@@ -177,6 +179,7 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
     depends_on:
       postgres-disbursement:
         condition: service_healthy
@@ -192,6 +195,7 @@ services:
       - "8084:8084"
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
     depends_on:
       kafka:
         condition: service_started
@@ -206,6 +210,7 @@ services:
       SERVICES_DISBURSEMENT_SERVICE_URL: http://disbursement-service:8083
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
     depends_on:
       redis:
         condition: service_healthy
