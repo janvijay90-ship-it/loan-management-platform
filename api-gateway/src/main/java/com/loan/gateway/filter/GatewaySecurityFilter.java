@@ -36,6 +36,18 @@ public class GatewaySecurityFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
+        // Set standard CORS headers for browser clients (such as loan-portal on port 80)
+        httpResponse.setHeader("Access-Control-Allow-Origin", "*");
+        httpResponse.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
+        httpResponse.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Dev-Mode, *");
+        httpResponse.setHeader("Access-Control-Max-Age", "3600");
+
+        // Immediately fulfill browser preflight OPTIONS requests
+        if ("OPTIONS".equalsIgnoreCase(httpRequest.getMethod())) {
+            httpResponse.setStatus(HttpServletResponse.SC_OK);
+            return;
+        }
+
         String path = httpRequest.getRequestURI();
         String clientIp = getClientIp(httpRequest);
 
