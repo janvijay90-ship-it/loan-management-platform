@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
-echo "=== 1. Requesting JWT Token from API Gateway ==="
-AUTH_RESPONSE=$(curl -s -X POST "http://localhost:8080/api/v1/auth/token" \
+GATEWAY_HOST="${GATEWAY_HOST:-localhost}"
+GATEWAY_URL="http://${GATEWAY_HOST}:8080"
+
+echo "=== 1. Requesting JWT Token from API Gateway (${GATEWAY_URL}) ==="
+AUTH_RESPONSE=$(curl -s -X POST "${GATEWAY_URL}/api/v1/auth/token" \
   -H "Content-Type: application/json" \
   -d '{"username": "vijay", "role": "CUSTOMER"}')
 
@@ -16,7 +19,7 @@ echo "JWT Token successfully acquired."
 
 echo ""
 echo "=== 2. Submitting Loan Application via API Gateway ==="
-SUBMIT_RESPONSE=$(curl -s -X POST "http://localhost:8080/api/v1/loans" \
+SUBMIT_RESPONSE=$(curl -s -X POST "${GATEWAY_URL}/api/v1/loans" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"customerId":"CUST-1001","applicantName":"Vijay jangili","panNumber":"BXCPV7093L","phoneNumber":"9100334722","requestedAmount":75000.00}')
@@ -31,18 +34,18 @@ fi
 echo "Tracking Loan Reference ID: $REF_ID"
 
 echo ""
-echo "Waiting 6 seconds for asynchronous Kafka outbox event processing..."
-sleep 6
+echo "Waiting 8 seconds for asynchronous Kafka outbox event processing..."
+sleep 8
 
 echo ""
 echo "=== 3. Querying Final Loan Status ==="
-STATUS_RESPONSE=$(curl -s -X GET "http://localhost:8080/api/v1/loans/reference/$REF_ID" \
+STATUS_RESPONSE=$(curl -s -X GET "${GATEWAY_URL}/api/v1/loans/reference/$REF_ID" \
   -H "Authorization: Bearer $TOKEN")
 echo "Status Response: $STATUS_RESPONSE"
 
 echo ""
 echo "=== 4. Querying Disbursement Record ==="
-DISB_RESPONSE=$(curl -s -X GET "http://localhost:8080/api/v1/disbursements/loan/$REF_ID" \
+DISB_RESPONSE=$(curl -s -X GET "${GATEWAY_URL}/api/v1/disbursements/loan/$REF_ID" \
   -H "Authorization: Bearer $TOKEN")
 echo "Disbursement Response: $DISB_RESPONSE"
 

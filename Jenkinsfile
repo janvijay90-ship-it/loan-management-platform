@@ -62,36 +62,22 @@ pipeline {
         stage('3. Build Docker Images') {
             steps {
                 echo "Building Docker container images via Docker Compose..."
-                sh 'docker compose build'
+                sh 'docker compose build loan-service risk-service disbursement-service notification-service api-gateway'
             }
         }
 
-        stage('4. Integration Smoke Testing in Ephemeral Stack') {
+        stage('4. Integration Smoke Testing against Platform Stack') {
+            environment {
+                GATEWAY_HOST = 'api-gateway'
+            }
             steps {
-                echo "Spinning up all 10 containers (Microservices + Postgres + Redis + Kafka)..."
+                echo "Executing automated end-to-end smoke test against the platform..."
                 sh '''
-                    # Ensure any existing stopped containers are removed cleanly
-                    docker compose down -v || true
-
-                    # Start up the full platform stack in detached mode
-                    docker compose up -d
-
-                    # Wait for Spring Boot services and Kafka broker to be fully ready
-                    echo "Waiting for services to become healthy..."
-                    sleep 35
-
-                    # Execute automated end-to-end smoke test
                     if [ -f scripts/test_e2e.sh ]; then
-                        chmod +x scripts/test_e2e.sh
-                        ./scripts/test_e2e.sh
+                        chmod +x scripts/test_e2e.sh || true
+                        bash scripts/test_e2e.sh
                     fi
                 '''
-            }
-            post {
-                always {
-                    echo "Cleaning up ephemeral test containers..."
-                    sh 'docker compose down -v'
-                }
             }
         }
 
