@@ -6,16 +6,9 @@ pipeline {
         BUILD_TAG = "${env.BUILD_NUMBER}-${env.GIT_COMMIT ? env.GIT_COMMIT.take(7) : 'local'}"
     }
 
-    tools {
-        // Ensure Jenkins has these tool names defined in Global Tool Configuration
-        maven 'Maven-3'
-        jdk   'JDK-17'
-    }
-
     options {
         timeout(time: 30, unit: 'MINUTES')
         buildDiscarder(logRotator(numToKeepStr: '10'))
-        timestamps()
     }
 
     stages {
