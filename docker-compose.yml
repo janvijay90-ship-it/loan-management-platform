@@ -79,6 +79,8 @@ services:
     container_name: config-server
     ports:
       - "8888:8888"
+    volumes:
+      - ./config-repo:/app/config-repo
     depends_on:
       service-registry:
         condition: service_started

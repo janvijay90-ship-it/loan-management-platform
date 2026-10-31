@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: config-server
+
+# Example property
+example.property: demo-value
