@@ -284,6 +284,7 @@ services:
     build: ./jenkins
     image: loan-platform-jenkins:lts
     container_name: jenkins-ci
+    user: root
     ports:
       - "8085:8080"    # Jenkins Web UI
       - "50000:50000"  # Jenkins agent port

@@ -1,0 +1,185 @@
+# Loan Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loan-service
+  namespace: loan-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loan-service
+  template:
+    metadata:
+      labels:
+        app: loan-service
+    spec:
+      containers:
+        - name: loan-service
+          image: loan-management-platform-loan-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres-loan:5432/loan_db
+            - name: SPRING_DATASOURCE_USERNAME
+              value: loan_user
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: loan_password
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:29092
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: http://service-registry:8761/eureka/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loan-service
+  namespace: loan-system
+spec:
+  selector:
+    app: loan-service
+  ports:
+    - port: 8081
+      targetPort: 8081
+---
+# Risk Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: risk-service
+  namespace: loan-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: risk-service
+  template:
+    metadata:
+      labels:
+        app: risk-service
+    spec:
+      containers:
+        - name: risk-service
+          image: loan-management-platform-risk-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres-risk:5432/risk_db
+            - name: SPRING_DATASOURCE_USERNAME
+              value: risk_user
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: risk_password
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:29092
+            - name: SPRING_DATA_REDIS_HOST
+              value: redis
+            - name: SPRING_DATA_REDIS_PORT
+              value: "6379"
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: http://service-registry:8761/eureka/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: risk-service
+  namespace: loan-system
+spec:
+  selector:
+    app: risk-service
+  ports:
+    - port: 8082
+      targetPort: 8082
+---
+# Disbursement Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: disbursement-service
+  namespace: loan-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: disbursement-service
+  template:
+    metadata:
+      labels:
+        app: disbursement-service
+    spec:
+      containers:
+        - name: disbursement-service
+          image: loan-management-platform-disbursement-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8083
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres-disbursement:5432/disbursement_db
+            - name: SPRING_DATASOURCE_USERNAME
+              value: disbursement_user
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: disbursement_password
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:29092
+            - name: SPRING_DATA_REDIS_HOST
+              value: redis
+            - name: SPRING_DATA_REDIS_PORT
+              value: "6379"
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: http://service-registry:8761/eureka/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: disbursement-service
+  namespace: loan-system
+spec:
+  selector:
+    app: disbursement-service
+  ports:
+    - port: 8083
+      targetPort: 8083
+---
+# Notification Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: loan-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+        - name: notification-service
+          image: loan-management-platform-notification-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8084
+          env:
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:29092
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: http://service-registry:8761/eureka/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: loan-system
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - port: 8084
+      targetPort: 8084

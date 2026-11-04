@@ -1,0 +1,159 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: loan-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: loan-system
+spec:
+  selector:
+    app: redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+# PostgreSQL for Loan Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-loan
+  namespace: loan-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-loan
+  template:
+    metadata:
+      labels:
+        app: postgres-loan
+    spec:
+      containers:
+        - name: postgres-loan
+          image: postgres:15-alpine
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POSTGRES_DB
+              value: loan_db
+            - name: POSTGRES_USER
+              value: loan_user
+            - name: POSTGRES_PASSWORD
+              value: loan_password
+          ports:
+            - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-loan
+  namespace: loan-system
+spec:
+  selector:
+    app: postgres-loan
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+# PostgreSQL for Risk Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-risk
+  namespace: loan-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-risk
+  template:
+    metadata:
+      labels:
+        app: postgres-risk
+    spec:
+      containers:
+        - name: postgres-risk
+          image: postgres:15-alpine
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POSTGRES_DB
+              value: risk_db
+            - name: POSTGRES_USER
+              value: risk_user
+            - name: POSTGRES_PASSWORD
+              value: risk_password
+          ports:
+            - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-risk
+  namespace: loan-system
+spec:
+  selector:
+    app: postgres-risk
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+# PostgreSQL for Disbursement Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-disbursement
+  namespace: loan-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-disbursement
+  template:
+    metadata:
+      labels:
+        app: postgres-disbursement
+    spec:
+      containers:
+        - name: postgres-disbursement
+          image: postgres:15-alpine
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POSTGRES_DB
+              value: disbursement_db
+            - name: POSTGRES_USER
+              value: disbursement_user
+            - name: POSTGRES_PASSWORD
+              value: disbursement_password
+          ports:
+            - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-disbursement
+  namespace: loan-system
+spec:
+  selector:
+    app: postgres-disbursement
+  ports:
+    - port: 5432
+      targetPort: 5432
