@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
         - name: loan-service
-          image: loan-management-platform-loan-service:latest
-          imagePullPolicy: IfNotPresent
+          image: 306317596640.dkr.ecr.ap-south-1.amazonaws.com/loan-service:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8081
           env:
@@ -62,8 +62,8 @@ spec:
     spec:
       containers:
         - name: risk-service
-          image: loan-management-platform-risk-service:latest
-          imagePullPolicy: IfNotPresent
+          image: 306317596640.dkr.ecr.ap-south-1.amazonaws.com/risk-service:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8082
           env:
@@ -112,8 +112,8 @@ spec:
     spec:
       containers:
         - name: disbursement-service
-          image: loan-management-platform-disbursement-service:latest
-          imagePullPolicy: IfNotPresent
+          image: 306317596640.dkr.ecr.ap-south-1.amazonaws.com/disbursement-service:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8083
           env:
@@ -162,8 +162,8 @@ spec:
     spec:
       containers:
         - name: notification-service
-          image: loan-management-platform-notification-service:latest
-          imagePullPolicy: IfNotPresent
+          image: 306317596640.dkr.ecr.ap-south-1.amazonaws.com/notification-service:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8084
           env:

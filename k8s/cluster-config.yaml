@@ -1,0 +1,29 @@
+# Production EKS Cluster Configuration for Loan Management Platform
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: loan-platform-eks
+  region: ap-south-1
+  version: "1.32"
+
+# Managed Node Group: High performance across 2 Availability Zones
+managedNodeGroups:
+  - name: loan-workers
+    instanceType: t3.large     # 2 vCPU, 8 GB RAM per node (optimal for Spring Boot + Kafka)
+    desiredCapacity: 2
+    minSize: 1
+    maxSize: 3
+    volumeSize: 30
+    volumeType: gp3
+    labels:
+      role: loan-workers
+    tags:
+      environment: production
+      project: loan-management-platform
+    iam:
+      withAddonPolicies:
+        autoScaler: true
+        albIngress: true
+        cloudWatch: true
+        ebs: true

@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
         - name: service-registry
-          image: loan-management-platform-service-registry:latest
-          imagePullPolicy: IfNotPresent
+          image: 306317596640.dkr.ecr.ap-south-1.amazonaws.com/service-registry:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8761
 ---
@@ -49,8 +49,8 @@ spec:
     spec:
       containers:
         - name: config-server
-          image: loan-management-platform-config-server:latest
-          imagePullPolicy: IfNotPresent
+          image: 306317596640.dkr.ecr.ap-south-1.amazonaws.com/config-server:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8888
 ---

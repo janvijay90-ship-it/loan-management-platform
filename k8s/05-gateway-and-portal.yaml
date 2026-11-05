@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
         - name: api-gateway
-          image: loan-management-platform-api-gateway:latest
-          imagePullPolicy: IfNotPresent
+          image: 306317596640.dkr.ecr.ap-south-1.amazonaws.com/api-gateway:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           env:
@@ -32,12 +32,16 @@ spec:
             - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
               value: http://service-registry:8761/eureka/
 ---
-# Expose API Gateway directly on localhost:8080 via LoadBalancer
+# Expose API Gateway to Internet via AWS Network/Application LoadBalancer
 apiVersion: v1
 kind: Service
 metadata:
   name: api-gateway
   namespace: loan-system
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
 spec:
   type: LoadBalancer
   selector:
@@ -64,17 +68,21 @@ spec:
     spec:
       containers:
         - name: loan-portal
-          image: loan-management-platform-loan-portal:latest
-          imagePullPolicy: IfNotPresent
+          image: 306317596640.dkr.ecr.ap-south-1.amazonaws.com/loan-portal:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
 ---
-# Expose Web Portal on localhost:80 via LoadBalancer
+# Expose Loan Portal to Internet via AWS LoadBalancer
 apiVersion: v1
 kind: Service
 metadata:
   name: loan-portal
   namespace: loan-system
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
 spec:
   type: LoadBalancer
   selector:
