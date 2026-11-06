@@ -123,7 +123,10 @@ pipeline {
         // ══════════════════════════════════════════════════════════════════
         stage('5. Push Images to ECR') {
             when {
-                branch 'main'
+                anyOf {
+                    branch 'main'
+                    expression { return env.GIT_BRANCH?.endsWith('main') || !env.BRANCH_NAME }
+                }
             }
             steps {
                 withCredentials([[
@@ -171,7 +174,10 @@ pipeline {
         // ══════════════════════════════════════════════════════════════════
         stage('6. Deploy to EKS') {
             when {
-                branch 'main'
+                anyOf {
+                    branch 'main'
+                    expression { return env.GIT_BRANCH?.endsWith('main') || !env.BRANCH_NAME }
+                }
             }
             steps {
                 withCredentials([[
@@ -252,7 +258,10 @@ pipeline {
         // ══════════════════════════════════════════════════════════════════
         stage('7. Post-Deploy Verification') {
             when {
-                branch 'main'
+                anyOf {
+                    branch 'main'
+                    expression { return env.GIT_BRANCH?.endsWith('main') || !env.BRANCH_NAME }
+                }
             }
             steps {
                 withCredentials([[
