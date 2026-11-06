@@ -7,7 +7,7 @@ FROM jenkins/jenkins:lts-jdk17
 
 USER root
 
-# Install Docker CLI, jq, curl
+# Install Docker CLI, jq, curl, unzip, aws-cli, kubectl
 RUN apt-get update && apt-get install -y \
     apt-transport-https \
     ca-certificates \
@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     gnupg \
     lsb-release \
     jq \
+    unzip \
     && curl -fsSL https://download.docker.com/linux/debian/gpg \
        | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
@@ -22,6 +23,12 @@ RUN apt-get update && apt-get install -y \
        > /etc/apt/sources.list.d/docker.list \
     && apt-get update \
     && apt-get install -y docker-ce-cli \
+    && curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
+    && unzip -q awscliv2.zip \
+    && ./aws/install \
+    && rm -rf aws awscliv2.zip \
+    && curl -fsSL https://dl.k8s.io/release/v1.32.2/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl \
+    && chmod +x /usr/local/bin/kubectl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Maven 3.9.6

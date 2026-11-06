@@ -129,43 +129,38 @@ pipeline {
                 }
             }
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-credentials'   // matches the ID you set in Jenkins
-                ]]) {
-                    echo "Logging into Amazon ECR..."
-                    sh """
-                        aws ecr get-login-password --region ${AWS_REGION} \
-                            | docker login --username AWS --password-stdin ${ECR_REGISTRY}
-                    """
+                echo "Logging into Amazon ECR..."
+                sh """
+                    aws ecr get-login-password --region ${AWS_REGION} \
+                        | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                """
 
-                    echo "Pushing images to ECR (tag: ${BUILD_TAG})..."
-                    sh """
-                        docker push ${ECR_API_GATEWAY}:${BUILD_TAG}
-                        docker push ${ECR_API_GATEWAY}:latest
+                echo "Pushing images to ECR (tag: ${BUILD_TAG})..."
+                sh """
+                    docker push ${ECR_API_GATEWAY}:${BUILD_TAG}
+                    docker push ${ECR_API_GATEWAY}:latest
 
-                        docker push ${ECR_LOAN_SERVICE}:${BUILD_TAG}
-                        docker push ${ECR_LOAN_SERVICE}:latest
+                    docker push ${ECR_LOAN_SERVICE}:${BUILD_TAG}
+                    docker push ${ECR_LOAN_SERVICE}:latest
 
-                        docker push ${ECR_RISK_SERVICE}:${BUILD_TAG}
-                        docker push ${ECR_RISK_SERVICE}:latest
+                    docker push ${ECR_RISK_SERVICE}:${BUILD_TAG}
+                    docker push ${ECR_RISK_SERVICE}:latest
 
-                        docker push ${ECR_DISBURSEMENT}:${BUILD_TAG}
-                        docker push ${ECR_DISBURSEMENT}:latest
+                    docker push ${ECR_DISBURSEMENT}:${BUILD_TAG}
+                    docker push ${ECR_DISBURSEMENT}:latest
 
-                        docker push ${ECR_NOTIFICATION}:${BUILD_TAG}
-                        docker push ${ECR_NOTIFICATION}:latest
+                    docker push ${ECR_NOTIFICATION}:${BUILD_TAG}
+                    docker push ${ECR_NOTIFICATION}:latest
 
-                        docker push ${ECR_LOAN_PORTAL}:${BUILD_TAG}
-                        docker push ${ECR_LOAN_PORTAL}:latest
+                    docker push ${ECR_LOAN_PORTAL}:${BUILD_TAG}
+                    docker push ${ECR_LOAN_PORTAL}:latest
 
-                        docker push ${ECR_SERVICE_REGISTRY}:${BUILD_TAG}
-                        docker push ${ECR_SERVICE_REGISTRY}:latest
+                    docker push ${ECR_SERVICE_REGISTRY}:${BUILD_TAG}
+                    docker push ${ECR_SERVICE_REGISTRY}:latest
 
-                        docker push ${ECR_CONFIG_SERVER}:${BUILD_TAG}
-                        docker push ${ECR_CONFIG_SERVER}:latest
-                    """
-                }
+                    docker push ${ECR_CONFIG_SERVER}:${BUILD_TAG}
+                    docker push ${ECR_CONFIG_SERVER}:latest
+                """
             }
         }
 
@@ -180,76 +175,71 @@ pipeline {
                 }
             }
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-credentials'
-                ]]) {
-                    echo "Updating kubeconfig for cluster: ${EKS_CLUSTER}..."
-                    sh """
-                        aws eks update-kubeconfig \
-                            --name ${EKS_CLUSTER} \
-                            --region ${AWS_REGION}
-                    """
+                echo "Updating kubeconfig for cluster: ${EKS_CLUSTER}..."
+                sh """
+                    aws eks update-kubeconfig \
+                        --name ${EKS_CLUSTER} \
+                        --region ${AWS_REGION}
+                """
 
-                    echo "Applying Kubernetes manifests..."
-                    sh """
-                        # Apply all manifests in order
-                        kubectl apply -f k8s/00-namespace.yaml
-                        kubectl apply -f k8s/01-databases.yaml
-                        kubectl apply -f k8s/02-kafka.yaml
-                        kubectl apply -f k8s/03-registry-and-config.yaml
-                        kubectl apply -f k8s/04-microservices.yaml
-                        kubectl apply -f k8s/05-gateway-and-portal.yaml
+                echo "Applying Kubernetes manifests..."
+                sh """
+                    # Apply all manifests in order
+                    kubectl apply -f k8s/00-namespace.yaml
+                    kubectl apply -f k8s/01-databases.yaml
+                    kubectl apply -f k8s/02-kafka.yaml
+                    kubectl apply -f k8s/03-registry-and-config.yaml
+                    kubectl apply -f k8s/04-microservices.yaml
+                    kubectl apply -f k8s/05-gateway-and-portal.yaml
 
-                        # Update image tags to this exact build
-                        kubectl set image deployment/api-gateway \
-                            api-gateway=${ECR_API_GATEWAY}:${BUILD_TAG} \
-                            -n ${K8S_NAMESPACE}
+                    # Update image tags to this exact build
+                    kubectl set image deployment/api-gateway \
+                        api-gateway=${ECR_API_GATEWAY}:${BUILD_TAG} \
+                        -n ${K8S_NAMESPACE}
 
-                        kubectl set image deployment/loan-service \
-                            loan-service=${ECR_LOAN_SERVICE}:${BUILD_TAG} \
-                            -n ${K8S_NAMESPACE}
+                    kubectl set image deployment/loan-service \
+                        loan-service=${ECR_LOAN_SERVICE}:${BUILD_TAG} \
+                        -n ${K8S_NAMESPACE}
 
-                        kubectl set image deployment/risk-service \
-                            risk-service=${ECR_RISK_SERVICE}:${BUILD_TAG} \
-                            -n ${K8S_NAMESPACE}
+                    kubectl set image deployment/risk-service \
+                        risk-service=${ECR_RISK_SERVICE}:${BUILD_TAG} \
+                        -n ${K8S_NAMESPACE}
 
-                        kubectl set image deployment/disbursement-service \
-                            disbursement-service=${ECR_DISBURSEMENT}:${BUILD_TAG} \
-                            -n ${K8S_NAMESPACE}
+                    kubectl set image deployment/disbursement-service \
+                        disbursement-service=${ECR_DISBURSEMENT}:${BUILD_TAG} \
+                        -n ${K8S_NAMESPACE}
 
-                        kubectl set image deployment/notification-service \
-                            notification-service=${ECR_NOTIFICATION}:${BUILD_TAG} \
-                            -n ${K8S_NAMESPACE}
+                    kubectl set image deployment/notification-service \
+                        notification-service=${ECR_NOTIFICATION}:${BUILD_TAG} \
+                        -n ${K8S_NAMESPACE}
 
-                        kubectl set image deployment/loan-portal \
-                            loan-portal=${ECR_LOAN_PORTAL}:${BUILD_TAG} \
-                            -n ${K8S_NAMESPACE}
+                    kubectl set image deployment/loan-portal \
+                        loan-portal=${ECR_LOAN_PORTAL}:${BUILD_TAG} \
+                        -n ${K8S_NAMESPACE}
 
-                        kubectl set image deployment/service-registry \
-                            service-registry=${ECR_SERVICE_REGISTRY}:${BUILD_TAG} \
-                            -n ${K8S_NAMESPACE}
+                    kubectl set image deployment/service-registry \
+                        service-registry=${ECR_SERVICE_REGISTRY}:${BUILD_TAG} \
+                        -n ${K8S_NAMESPACE}
 
-                        kubectl set image deployment/config-server \
-                            config-server=${ECR_CONFIG_SERVER}:${BUILD_TAG} \
-                            -n ${K8S_NAMESPACE}
-                    """
+                    kubectl set image deployment/config-server \
+                        config-server=${ECR_CONFIG_SERVER}:${BUILD_TAG} \
+                        -n ${K8S_NAMESPACE}
+                """
 
-                    echo "Waiting for rollout to complete..."
-                    sh """
-                        kubectl rollout status deployment/service-registry    -n ${K8S_NAMESPACE} --timeout=5m
-                        kubectl rollout status deployment/config-server        -n ${K8S_NAMESPACE} --timeout=5m
-                        kubectl rollout status deployment/loan-service         -n ${K8S_NAMESPACE} --timeout=5m
-                        kubectl rollout status deployment/risk-service         -n ${K8S_NAMESPACE} --timeout=5m
-                        kubectl rollout status deployment/disbursement-service -n ${K8S_NAMESPACE} --timeout=5m
-                        kubectl rollout status deployment/notification-service -n ${K8S_NAMESPACE} --timeout=5m
-                        kubectl rollout status deployment/api-gateway          -n ${K8S_NAMESPACE} --timeout=5m
-                        kubectl rollout status deployment/loan-portal          -n ${K8S_NAMESPACE} --timeout=5m
-                    """
+                echo "Waiting for rollout to complete..."
+                sh """
+                    kubectl rollout status deployment/service-registry    -n ${K8S_NAMESPACE} --timeout=5m
+                    kubectl rollout status deployment/config-server        -n ${K8S_NAMESPACE} --timeout=5m
+                    kubectl rollout status deployment/loan-service         -n ${K8S_NAMESPACE} --timeout=5m
+                    kubectl rollout status deployment/risk-service         -n ${K8S_NAMESPACE} --timeout=5m
+                    kubectl rollout status deployment/disbursement-service -n ${K8S_NAMESPACE} --timeout=5m
+                    kubectl rollout status deployment/notification-service -n ${K8S_NAMESPACE} --timeout=5m
+                    kubectl rollout status deployment/api-gateway          -n ${K8S_NAMESPACE} --timeout=5m
+                    kubectl rollout status deployment/loan-portal          -n ${K8S_NAMESPACE} --timeout=5m
+                """
 
-                    echo "Deployment complete! Live pods:"
-                    sh "kubectl get pods -n ${K8S_NAMESPACE}"
-                }
+                echo "Deployment complete! Live pods:"
+                sh "kubectl get pods -n ${K8S_NAMESPACE}"
             }
         }
 
@@ -264,21 +254,16 @@ pipeline {
                 }
             }
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-credentials'
-                ]]) {
-                    sh """
-                        echo "=== Pods ==="
-                        kubectl get pods -n ${K8S_NAMESPACE}
+                sh """
+                    echo "=== Pods ==="
+                    kubectl get pods -n ${K8S_NAMESPACE}
 
-                        echo "=== Services (check LoadBalancer EXTERNAL-IP) ==="
-                        kubectl get svc -n ${K8S_NAMESPACE}
+                    echo "=== Services (check LoadBalancer EXTERNAL-IP) ==="
+                    kubectl get svc -n ${K8S_NAMESPACE}
 
-                        echo "=== Recent Warning Events ==="
-                        kubectl get events -n ${K8S_NAMESPACE} --field-selector type=Warning || true
-                    """
-                }
+                    echo "=== Recent Warning Events ==="
+                    kubectl get events -n ${K8S_NAMESPACE} --field-selector type=Warning || true
+                """
             }
         }
 
