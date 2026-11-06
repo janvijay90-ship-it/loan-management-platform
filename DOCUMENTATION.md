@@ -505,3 +505,288 @@ git log --oneline -10
 | **API Gateway Health** | [http://a692fc249fc3d4286950039d0057478f-1319876203.ap-south-1.elb.amazonaws.com:8080/actuator/health](http://a692fc249fc3d4286950039d0057478f-1319876203.ap-south-1.elb.amazonaws.com:8080/actuator/health) | Gateway Status & Discovery |
 | **Jenkins CI/CD** | [http://localhost:8085/jenkins](http://localhost:8085/jenkins) | Pipeline Dashboard |
 | **Eureka Registry (local)** | [http://localhost:8761](http://localhost:8761) | Service Registry |
+
+---
+
+## 9. Manual AWS Deployment Runbook (From Scratch)
+
+If you ever need to manually deploy the entire loan management platform to a brand-new AWS account or clean environment without Jenkins, follow this step-by-step procedure:
+
+```mermaid
+flowchart TD
+    S1["1. Install & Configure CLI Tools"] --> S2["2. Create 8 ECR Repositories"]
+    S2 --> S3["3. Build JARs & Docker Images Locally"]
+    S3 --> S4["4. Authenticate & Push Images to ECR"]
+    S4 --> S5["5. Provision EKS Cluster via eksctl"]
+    S5 --> S6["6. Attach ECR Pull Policy to Node Role"]
+    S6 --> S7["7. Configure Kubeconfig & IAM Auth"]
+    S7 --> S8["8. Apply Kubernetes Manifests in Order"]
+    S8 --> S9["9. Verify Pods & Get Public LoadBalancer URLs"]
+    S9 --> S10["10. Test End-to-End Application Flow"]
+```
+
+---
+
+### Step 1: Install & Verify Required CLI Tools
+
+Ensure you have the required CLI tools installed on your terminal (Windows PowerShell or macOS/Linux):
+
+```powershell
+# 1. AWS CLI v2
+aws --version
+
+# 2. Kubernetes CLI (kubectl)
+kubectl version --client
+
+# 3. EKS Management CLI (eksctl)
+eksctl version
+
+# 4. Docker Engine
+docker --version
+
+# 5. Apache Maven & Java 17/21
+mvn -version
+java -version
+```
+
+---
+
+### Step 2: Configure AWS Credentials
+
+Set up your AWS profile with region `ap-south-1` (Mumbai):
+
+```powershell
+aws configure
+# AWS Access Key ID: [Your-Access-Key]
+# AWS Secret Access Key: [Your-Secret-Key]
+# Default region name: ap-south-1
+# Default output format: json
+
+# Verify identity and account ID
+aws sts get-caller-identity
+```
+
+---
+
+### Step 3: Create the 8 AWS ECR Repositories
+
+Create private container repositories in your AWS region:
+
+```powershell
+$REGION = "ap-south-1"
+$REPOS = @(
+  "service-registry",
+  "config-server",
+  "api-gateway",
+  "loan-service",
+  "risk-service",
+  "disbursement-service",
+  "notification-service",
+  "loan-portal"
+)
+
+foreach ($repo in $REPOS) {
+    aws ecr create-repository `
+      --repository-name $repo `
+      --region $REGION `
+      --image-scanning-configuration scanOnPush=true `
+      --image-tag-mutability MUTABLE 2>$null
+    Write-Host "Created ECR repository: $repo"
+}
+```
+
+---
+
+### Step 4: Build Microservice Binaries & Docker Images Locally
+
+Package the Java Spring Boot microservices into executable JARs and build Docker images:
+
+```powershell
+# Navigate to project root
+cd d:\loan-management-system\loan-management-platform
+
+# 1. Package all Spring Boot modules via parent POM
+mvn clean package -DskipTests
+
+# 2. Define your AWS Registry URI
+$ACCOUNT_ID = (aws sts get-caller-identity --query Account --output text)
+$ECR_REGISTRY = "${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
+
+# 3. Build and tag all 8 Docker images
+docker build -t "${ECR_REGISTRY}/service-registry:latest"    ./service-registry
+docker build -t "${ECR_REGISTRY}/config-server:latest"       ./config-server
+docker build -t "${ECR_REGISTRY}/api-gateway:latest"         ./api-gateway
+docker build -t "${ECR_REGISTRY}/loan-service:latest"        ./loan-service
+docker build -t "${ECR_REGISTRY}/risk-service:latest"        ./risk-service
+docker build -t "${ECR_REGISTRY}/disbursement-service:latest"./disbursement-service
+docker build -t "${ECR_REGISTRY}/notification-service:latest"./notification-service
+docker build -t "${ECR_REGISTRY}/loan-portal:latest"         ./loan-portal
+```
+
+---
+
+### Step 5: Authenticate Docker and Push Images to Amazon ECR
+
+Log in your local Docker engine to the AWS ECR registry and push all 8 images:
+
+```powershell
+# 1. Authenticate Docker with AWS ECR
+aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+# 2. Push all 8 container images
+docker push "${ECR_REGISTRY}/service-registry:latest"
+docker push "${ECR_REGISTRY}/config-server:latest"
+docker push "${ECR_REGISTRY}/api-gateway:latest"
+docker push "${ECR_REGISTRY}/loan-service:latest"
+docker push "${ECR_REGISTRY}/risk-service:latest"
+docker push "${ECR_REGISTRY}/disbursement-service:latest"
+docker push "${ECR_REGISTRY}/notification-service:latest"
+docker push "${ECR_REGISTRY}/loan-portal:latest"
+```
+
+---
+
+### Step 6: Provision the AWS EKS Cluster with `eksctl`
+
+Create the managed Kubernetes cluster with 2 worker nodes across availability zones:
+
+```powershell
+eksctl create cluster `
+  --name loan-platform-eks `
+  --region ap-south-1 `
+  --version 1.32 `
+  --nodegroup-name standard-workers `
+  --node-type t3.medium `
+  --nodes 2 `
+  --nodes-min 2 `
+  --nodes-max 3 `
+  --managed
+```
+*(This process provisions VPC, Subnets, Internet Gateways, Route Tables, Control Plane, and Node Groups in ~15 minutes).*
+
+---
+
+### Step 7: Attach ECR Pull Permissions & Map IAM Admin
+
+1. **Attach ECR Pull Policy to Worker Node Role**:
+   ```powershell
+   # Find the NodeGroup IAM Role Name
+   $NODE_ROLE = (aws iam list-roles --query "Roles[?contains(RoleName, 'loan-platform-eks-nodegroup')].RoleName" --output text).Split()[0]
+
+   # Attach pull permission so worker nodes can pull images from ECR without imagePullSecrets
+   aws iam attach-role-policy `
+     --role-name $NODE_ROLE `
+     --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPullOnly
+   ```
+
+2. **Map your IAM user to Kubernetes cluster administrators**:
+   ```powershell
+   eksctl create iamidentitymapping `
+     --cluster loan-platform-eks `
+     --region ap-south-1 `
+     --arn arn:aws:iam::${ACCOUNT_ID}:user/deploy-loanManagement-platform `
+     --group system:masters `
+     --username deploy-loanManagement-platform
+   ```
+
+3. **Update local Kubeconfig**:
+   ```powershell
+   aws eks update-kubeconfig --name loan-platform-eks --region ap-south-1
+
+   # Verify connectivity
+   kubectl get nodes
+   ```
+
+---
+
+### Step 8: Apply Kubernetes Manifests in Order
+
+Apply the manifests into the `loan-system` namespace in sequential order:
+
+```powershell
+# 1. Create Namespace
+kubectl apply -f k8s/00-namespace.yaml
+
+# 2. Deploy Databases & Caching (PostgreSQL & Redis)
+kubectl apply -f k8s/01-databases.yaml
+
+# 3. Deploy Event Backbone (Apache Kafka KRaft)
+kubectl apply -f k8s/02-kafka.yaml
+
+# 4. Deploy Service Discovery & Config Server (Eureka & Config)
+kubectl apply -f k8s/03-registry-and-config.yaml
+
+# 5. Deploy Core Microservices (Loan, Risk, Disbursement, Notification)
+kubectl apply -f k8s/04-microservices.yaml
+
+# 6. Deploy Ingress Gateway, UI & Public LoadBalancers
+kubectl apply -f k8s/05-gateway-and-portal.yaml
+```
+
+---
+
+### Step 9: Monitor Rollout & Verify Pods
+
+Wait for all microservices to complete their rolling deployments:
+
+```powershell
+# Watch rollout of core deployments
+kubectl rollout status deployment/service-registry    -n loan-system --timeout=5m
+kubectl rollout status deployment/config-server        -n loan-system --timeout=5m
+kubectl rollout status deployment/loan-service         -n loan-system --timeout=5m
+kubectl rollout status deployment/risk-service         -n loan-system --timeout=5m
+kubectl rollout status deployment/disbursement-service -n loan-system --timeout=5m
+kubectl rollout status deployment/notification-service -n loan-system --timeout=5m
+kubectl rollout status deployment/api-gateway          -n loan-system --timeout=5m
+kubectl rollout status deployment/loan-portal          -n loan-system --timeout=5m
+
+# Assert that all 13 pods are 1/1 Running with 0 restarts
+kubectl get pods -n loan-system
+```
+
+---
+
+### Step 10: Retrieve Public AWS LoadBalancer URLs & Test
+
+Query the Kubernetes services to obtain the AWS-provisioned LoadBalancer hostnames:
+
+```powershell
+kubectl get svc api-gateway loan-portal -n loan-system
+```
+
+You will see output similar to:
+```text
+NAME          TYPE           CLUSTER-IP       EXTERNAL-IP                                                                PORT(S)
+api-gateway   LoadBalancer   10.100.249.131   a692fc249fc3d4286950039d0057478f-1319876203.ap-south-1.elb.amazonaws.com   8080:30502/TCP
+loan-portal   LoadBalancer   10.100.8.74      a016fca81d2374f0fb7b06f3015b0dc2-1631296306.ap-south-1.elb.amazonaws.com   80:32009/TCP
+```
+
+1. **Test Gateway Health via Curl**:
+   ```powershell
+   curl.exe http://<API_GATEWAY_EXTERNAL_IP>:8080/actuator/health
+   # Returns: {"status":"UP","components":{...}}
+   ```
+
+2. **Open the Web Portal in Your Browser**:
+   Navigate to: `http://<LOAN_PORTAL_EXTERNAL_IP>`
+   Fill in applicant PAN, Name, and Amount, then click **Submit Loan Application** to test the entire live flow.
+
+---
+
+### Step 11: Teardown & Cost Optimization (When Done)
+
+When you are finished testing and want to avoid ongoing AWS cloud charges:
+
+```powershell
+# 1. Delete Kubernetes Services first (removes AWS Elastic Load Balancers)
+kubectl delete -f k8s/05-gateway-and-portal.yaml
+
+# 2. Delete the EKS cluster and its associated CloudFormation stacks, VPC, and EC2 nodes
+eksctl delete cluster --name loan-platform-eks --region ap-south-1
+
+# 3. (Optional) Delete ECR Repositories and all images
+foreach ($repo in $REPOS) {
+    aws ecr delete-repository --repository-name $repo --region ap-south-1 --force 2>$null
+}
+```
+
