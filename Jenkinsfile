@@ -80,18 +80,29 @@ pipeline {
             steps {
                 echo "Building and tagging Docker images for ECR (tag: ${BUILD_TAG})..."
                 sh """
-                    docker build -t ${ECR_API_GATEWAY}:${BUILD_TAG}     ./api-gateway
-                    docker build -t ${ECR_LOAN_SERVICE}:${BUILD_TAG}    ./loan-service
-                    docker build -t ${ECR_RISK_SERVICE}:${BUILD_TAG}    ./risk-service
-                    docker build -t ${ECR_DISBURSEMENT}:${BUILD_TAG}    ./disbursement-service
-                    docker build -t ${ECR_NOTIFICATION}:${BUILD_TAG}    ./notification-service
+                    # Infrastructure services
+                    docker build -t ${ECR_SERVICE_REGISTRY}:${BUILD_TAG} ./service-registry
+                    docker build -t ${ECR_CONFIG_SERVER}:${BUILD_TAG}    ./config-server
 
-                    # Also tag as 'latest' for convenience
-                    docker tag ${ECR_API_GATEWAY}:${BUILD_TAG}     ${ECR_API_GATEWAY}:latest
-                    docker tag ${ECR_LOAN_SERVICE}:${BUILD_TAG}    ${ECR_LOAN_SERVICE}:latest
-                    docker tag ${ECR_RISK_SERVICE}:${BUILD_TAG}    ${ECR_RISK_SERVICE}:latest
-                    docker tag ${ECR_DISBURSEMENT}:${BUILD_TAG}    ${ECR_DISBURSEMENT}:latest
-                    docker tag ${ECR_NOTIFICATION}:${BUILD_TAG}    ${ECR_NOTIFICATION}:latest
+                    # Core microservices
+                    docker build -t ${ECR_API_GATEWAY}:${BUILD_TAG}      ./api-gateway
+                    docker build -t ${ECR_LOAN_SERVICE}:${BUILD_TAG}     ./loan-service
+                    docker build -t ${ECR_RISK_SERVICE}:${BUILD_TAG}     ./risk-service
+                    docker build -t ${ECR_DISBURSEMENT}:${BUILD_TAG}     ./disbursement-service
+                    docker build -t ${ECR_NOTIFICATION}:${BUILD_TAG}     ./notification-service
+
+                    # Frontend
+                    docker build -t ${ECR_LOAN_PORTAL}:${BUILD_TAG}      ./loan-portal
+
+                    # Tag all as 'latest' for convenience
+                    docker tag ${ECR_SERVICE_REGISTRY}:${BUILD_TAG} ${ECR_SERVICE_REGISTRY}:latest
+                    docker tag ${ECR_CONFIG_SERVER}:${BUILD_TAG}    ${ECR_CONFIG_SERVER}:latest
+                    docker tag ${ECR_API_GATEWAY}:${BUILD_TAG}      ${ECR_API_GATEWAY}:latest
+                    docker tag ${ECR_LOAN_SERVICE}:${BUILD_TAG}     ${ECR_LOAN_SERVICE}:latest
+                    docker tag ${ECR_RISK_SERVICE}:${BUILD_TAG}     ${ECR_RISK_SERVICE}:latest
+                    docker tag ${ECR_DISBURSEMENT}:${BUILD_TAG}     ${ECR_DISBURSEMENT}:latest
+                    docker tag ${ECR_NOTIFICATION}:${BUILD_TAG}     ${ECR_NOTIFICATION}:latest
+                    docker tag ${ECR_LOAN_PORTAL}:${BUILD_TAG}      ${ECR_LOAN_PORTAL}:latest
                 """
             }
         }
