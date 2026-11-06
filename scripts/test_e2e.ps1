@@ -4,16 +4,19 @@
 # Dev bypass:    X-Dev-Mode: true header  (also inside gateway)
 # =============================================================
 
+$gatewayPort = if ($env:GATEWAY_PORT) { $env:GATEWAY_PORT } else { "8088" }
+$gatewayUrl  = "http://localhost:$gatewayPort"
+
 # -------------------------------------------------------
 # STEP 1 – Obtain JWT from the gateway's own auth endpoint
 # -------------------------------------------------------
-Write-Host "=== 1. Requesting JWT Token from API Gateway ===" -ForegroundColor Cyan
+Write-Host "=== 1. Requesting JWT Token from API Gateway ($gatewayUrl) ===" -ForegroundColor Cyan
 
 $token = $null
 try {
     $loginBody = '{"username":"admin","role":"ADMIN"}'
     $authResp  = Invoke-RestMethod `
-        -Uri         "http://localhost:8080/api/v1/auth/token" `
+        -Uri         "$gatewayUrl/api/v1/auth/token" `
         -Method      POST `
         -ContentType "application/json" `
         -Body        $loginBody
@@ -42,13 +45,13 @@ if ($token -and $token -ne "") {
 # -------------------------------------------------------
 # STEP 2 – Submit a loan application
 # -------------------------------------------------------
-Write-Host "`n=== 2. Submitting Loan Application via Gateway (Port 8080) ===" -ForegroundColor Cyan
+Write-Host "`n=== 2. Submitting Loan Application via Gateway ($gatewayUrl) ===" -ForegroundColor Cyan
 
 $body = '{"customerId":"CUST-1001","applicantName":"Vijay jangili","panNumber":"BXCPV7093L","phoneNumber":"9100334722","requestedAmount":75000.00}'
 
 try {
     $submitResp = Invoke-RestMethod `
-        -Uri     "http://localhost:8080/api/v1/loans" `
+        -Uri     "$gatewayUrl/api/v1/loans" `
         -Method  POST `
         -Headers $headers `
         -Body    $body
@@ -74,7 +77,7 @@ for ($i = 1; $i -le $maxRetries; $i++) {
     Start-Sleep -Seconds 3
     try {
         $statusResp    = Invoke-RestMethod `
-            -Uri     "http://localhost:8080/api/v1/loans/reference/$refId" `
+            -Uri     "$gatewayUrl/api/v1/loans/reference/$refId" `
             -Method  GET `
             -Headers $headers
         $currentStatus = $statusResp.status
@@ -93,7 +96,7 @@ for ($i = 1; $i -le $maxRetries; $i++) {
 Write-Host "`n=== 3. Querying Final Loan Status via Gateway ===" -ForegroundColor Cyan
 try {
     $statusResp = Invoke-RestMethod `
-        -Uri     "http://localhost:8080/api/v1/loans/reference/$refId" `
+        -Uri     "$gatewayUrl/api/v1/loans/reference/$refId" `
         -Method  GET `
         -Headers $headers
     $statusJson = $statusResp | ConvertTo-Json -Depth 5
@@ -108,7 +111,7 @@ try {
 Write-Host "`n=== 4. Querying Disbursement Record via Gateway ===" -ForegroundColor Cyan
 try {
     $disbResp = Invoke-RestMethod `
-        -Uri     "http://localhost:8080/api/v1/disbursements/loan/$refId" `
+        -Uri     "$gatewayUrl/api/v1/disbursements/loan/$refId" `
         -Method  GET `
         -Headers $headers
     $disbJson = $disbResp | ConvertTo-Json -Depth 5
